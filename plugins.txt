@@ -1,0 +1,11 @@
+# NV:MP
+FalloutNV.esm
+DeadMoney.esm
+HonestHearts.esm
+OldWorldBlues.esm
+LonesomeRoad.esm
+GunRunnersArsenal.esm
+ClassicPack.esm
+MercenaryPack.esm
+TribalPack.esm
+CaravanPack.esm
