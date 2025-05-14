@@ -1,0 +1,260 @@
+{
+    "_comment": "DO NOT EDIT: FILE GENERATED AUTOMATICALLY BY PANEL",
+    "meta": {
+        "version": "PLCN_v1",
+        "update_url": null
+    },
+    "exported_at": "2025-05-14T02:40:43+00:00",
+    "name": "New Vegas Multiplayer",
+    "author": "nataliee@duck.com",
+    "uuid": "0ac9adf8-3fb8-4acb-9ba3-e50bd59ef502",
+    "description": "New Vegas Multiplayer is an unofficial multiplayer framework modification of the Fallout title.",
+    "tags": [
+        "Fallout"
+    ],
+    "features": [],
+    "docker_images": {
+        "ghcr.io\/parkervcp\/yolks:wine_staging": "ghcr.io\/parkervcp\/yolks:wine_staging"
+    },
+    "file_denylist": [],
+    "startup": "wine nvmp_storyserver.exe",
+    "config": {
+        "files": "{\n  \"server.cfg\": {\n    \"parser\": \"file\",\n    \"find\": {\n      \"Hostname=\": \"Hostname={{server.environment.SERVER_HOSTNAME}}\",\n      \"Port=\": \"Port={{server.environment.GAME_SERVER_PORT}}.000000\",\n      \"EnableConsole=\": \"EnableConsole={{server.environment.ENABLE_CONSOLE}}\",\n      \"EnableSaving=\": \"EnableSaving={{server.environment.ENABLE_SAVING}}\",\n      \"EnableVATS=\": \"EnableVATS={{server.environment.ENABLE_VATS}}\",\n      \"StrictNVSE=\": \"StrictNVSE={{server.environment.STRICT_NVSE}}\",\n      \"Difficulty=\": \"Difficulty={{server.environment.DIFFICULTY}}\",\n      \"IsHardcore=\": \"IsHardcore={{server.environment.IS_HARDCORE}}\",\n      \"EnablePartySystem=\": \"EnablePartySystem={{server.environment.ENABLE_PARTY_SYSTEM}}\"\n    }\n  }\n}",
+        "startup": "{\n    \"done\": \"Thanks for playing NV:MP!\"\n}",
+        "logs": "{}",
+        "stop": "^C"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!\/bin\/bash\r\n# steamcmd Base Installation Script\r\n#\r\n# Server Files: \/mnt\/server\r\n# Image to install with is 'ghcr.io\/parkervcp\/installers:debian'\r\n\r\n\r\n# Install packages. Default packages below are not required if using our existing install image thus speeding up the install process.\r\napt -y update\r\napt -y --no-install-recommends install p7zip-full\r\n\r\n## just in case someone removed the defaults.\r\nif [[ \"${STEAM_USER}\" == \"\" ]] || [[ \"${STEAM_PASS}\" == \"\" ]]; then\r\n    echo -e \"steam user is not set.\\n\"\r\n    echo -e \"Using anonymous user.\\n\"\r\n    STEAM_USER=anonymous\r\n    STEAM_PASS=\"\"\r\n    STEAM_AUTH=\"\"\r\nelse\r\n    echo -e \"user set to ${STEAM_USER}\"\r\nfi\r\n\r\nexport LOOT_VERSION_URL=$(curl -Ls -o \/dev\/null -w %{url_effective} https:\/\/github.com\/loot\/loot\/releases\/latest)\r\nLOOT_VERSION=$(echo \"$LOOT_VERSION_URL\" | sed 's#.*\/##')\r\n\r\n## download and install steamcmd\r\ncd \/tmp\r\nmkdir -p \/mnt\/server\/steamcmd\r\ncurl -sSL -o steamcmd.tar.gz https:\/\/steamcdn-a.akamaihd.net\/client\/installer\/steamcmd_linux.tar.gz\r\ntar -xzvf steamcmd.tar.gz -C \/mnt\/server\/steamcmd\r\nmkdir -p \/mnt\/server\/steamapps # Fix steamcmd disk write error when this folder is missing\r\ncd \/mnt\/server\/steamcmd\r\n\r\n# SteamCMD fails otherwise for some reason, even running as root.\r\n# This is changed at the end of the install process anyways.\r\nchown -R root:root \/mnt\r\nexport HOME=\/mnt\/server\r\n\r\n## install game using steamcmd\r\n.\/steamcmd.sh +force_install_dir \/mnt\/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} $( [[ \"${WINDOWS_INSTALL}\" == \"1\" ]] && printf %s '+@sSteamCmdForcePlatformType windows' ) +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) ${INSTALL_FLAGS} validate +quit ## other flags may be needed depending on install. looking at you cs 1.6\r\n\r\n## set up 32 bit libraries\r\nmkdir -p \/mnt\/server\/.steam\/sdk32\r\ncp -v linux32\/steamclient.so ..\/.steam\/sdk32\/steamclient.so\r\n\r\n## set up 64 bit libraries\r\nmkdir -p \/mnt\/server\/.steam\/sdk64\r\ncp -v linux64\/steamclient.so ..\/.steam\/sdk64\/steamclient.so\r\n\r\n\r\ncd \/mnt\/server\r\n# Check for NV-MP and install if needed\r\nif [[ ! -f \/mnt\/server\/nvmp_storyserver.exe ]]; then\r\n  echo \"Installing NVMP...\"\r\n  curl -sSL -o nvmp.zip https:\/\/github.com\/NVMP\/ClientDistribution\/releases\/latest\/download\/build_release_client.zip\r\n  unzip nvmp.zip\r\n  rm -rf nvmp.zip\r\nfi\r\n\r\nif [[ ! -f \/mnt\/server\/.wine\/drive_c\/users\/container\/AppData\/Local\/FalloutNV\/plugins.txt ]]; then\r\n  echo \"Adding Ready Made Plugins.txt Settings...\"\r\n  curl -sSL -o plugins.txt https:\/\/raw.githubusercontent.com\/CuteNatalie\/nvmp-egg\/refs\/heads\/main\/plugins.txt\r\n  mkdir -p \/mnt\/server\/.wine\/drive_c\/users\/container\/AppData\/Local\/FalloutNV\/\r\n  mv plugins.txt \/mnt\/server\/.wine\/drive_c\/users\/container\/AppData\/Local\/FalloutNV\/plugins.txt\r\nfi\r\n\r\nif [[ ! -f \/mnt\/server\/nvse_loader.exe ]]; then\r\n  echo \"Installing NVSE...\"\r\n  curl -sSL -o nvse.7z https:\/\/github.com\/xNVSE\/NVSE\/releases\/download\/6.3.4\/nvse_6_3_4.7z\r\n  7z x nvse.7z\r\n  rm -rf nvse.7z\r\nfi\r\n\r\nif [[ ! -f \/mnt\/server\/server.cfg ]]; then\r\n  echo \"Adding server.cfg...\"\r\n  curl -sSL -o server.cfg https:\/\/raw.githubusercontent.com\/CuteNatalie\/nvmp-egg\/refs\/heads\/main\/server.cfg\r\nfi\r\n\r\n## install end\r\necho \"-----------------------------------------\"\r\necho \"Installation completed...\"\r\necho \"Please make sure to download these essential stability mods...\"\r\necho \"https:\/\/www.nexusmods.com\/newvegas\/mods\/53635\"\r\necho \"https:\/\/www.nexusmods.com\/newvegas\/mods\/79211\"\r\necho \"https:\/\/www.nexusmods.com\/newvegas\/mods\/71973\"\r\necho \"https:\/\/www.nexusmods.com\/newvegas\/mods\/80666\"\r\necho \"https:\/\/github.com\/nvmp-main\/New-Vegas-Tick-Fix\/releases\/download\/10.2.2.3b\/nvtf.7z\"\r\necho \"Install these files to Data\\NVSE\\Plugins\"\r\necho \"plugins.txt location is .wine\/drive_c\/users\/container\/AppData\/Local\/FalloutNV\/\"\r\necho \"-----------------------------------------\"",
+            "container": "ghcr.io\/parkervcp\/installers:debian",
+            "entrypoint": "bash"
+        }
+    },
+    "variables": [
+        {
+            "sort": 4,
+            "name": "Auto Update",
+            "description": "Auto update the server on start.",
+            "env_variable": "AUTO_UPDATE",
+            "default_value": "0",
+            "user_viewable": false,
+            "user_editable": false,
+            "rules": [
+                "boolean",
+                "nullable"
+            ]
+        },
+        {
+            "sort": 11,
+            "name": "Difficulty",
+            "description": "Globally overrides the difficulty in use by each player\nRanges from 0 for Very Easy, to 4 for Very Hard.",
+            "env_variable": "DIFFICULTY",
+            "default_value": "2",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": [
+                "required",
+                "integer",
+                "between:0,5"
+            ]
+        },
+        {
+            "sort": 7,
+            "name": "Enable Console",
+            "description": "If enabled, players can use console to run cheats",
+            "env_variable": "ENABLE_CONSOLE",
+            "default_value": "0",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": [
+                "required",
+                "integer",
+                "in:0,1"
+            ]
+        },
+        {
+            "sort": 13,
+            "name": "Enable Party System",
+            "description": "Enables the party system for all players",
+            "env_variable": "ENABLE_PARTY_SYSTEM",
+            "default_value": "1",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": [
+                "required",
+                "integer",
+                "in:0,1"
+            ]
+        },
+        {
+            "sort": 8,
+            "name": "Enable Saving",
+            "description": "If enabled, players can save their progress locally",
+            "env_variable": "ENABLE_SAVING",
+            "default_value": "1",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": [
+                "required",
+                "integer",
+                "in:0,1"
+            ]
+        },
+        {
+            "sort": 9,
+            "name": "Enable Vats",
+            "description": "If enabled, players can use VATS in combat",
+            "env_variable": "ENABLE_VATS",
+            "default_value": "0",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": [
+                "required",
+                "integer",
+                "in:0,1"
+            ]
+        },
+        {
+            "sort": 6,
+            "name": "Server Port",
+            "description": "Sets which port the server will listen on",
+            "env_variable": "GAME_SERVER_PORT",
+            "default_value": "27015",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": [
+                "required",
+                "integer"
+            ]
+        },
+        {
+            "sort": 12,
+            "name": "Is Hardcore",
+            "description": "Globally overrides the hardcore mode in use by each player",
+            "env_variable": "IS_HARDCORE",
+            "default_value": "0",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": [
+                "required",
+                "integer",
+                "in:0,1"
+            ]
+        },
+        {
+            "sort": 5,
+            "name": "Server Hostname",
+            "description": "Sets which hostname is listened to by the game server. Leave this as * if you don't know what this should be",
+            "env_variable": "SERVER_HOSTNAME",
+            "default_value": "*",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": [
+                "required"
+            ]
+        },
+        {
+            "sort": 3,
+            "name": "App ID",
+            "description": "Do not edit!",
+            "env_variable": "SRCDS_APPID",
+            "default_value": "22380",
+            "user_viewable": false,
+            "user_editable": false,
+            "rules": [
+                "required",
+                "string",
+                "in:22380"
+            ]
+        },
+        {
+            "sort": 2,
+            "name": "Steam Password",
+            "description": "Password for the Steam account to install a server.",
+            "env_variable": "STEAM_PASS",
+            "default_value": "",
+            "user_viewable": false,
+            "user_editable": false,
+            "rules": [
+                "required",
+                "string"
+            ]
+        },
+        {
+            "sort": 1,
+            "name": "Steam Username",
+            "description": "A steam username to use to install the server.\nOnly needed for games that need a user that owns the server",
+            "env_variable": "STEAM_USER",
+            "default_value": "",
+            "user_viewable": false,
+            "user_editable": false,
+            "rules": [
+                "required",
+                "string"
+            ]
+        },
+        {
+            "sort": 10,
+            "name": "Strict NVSE",
+            "description": "If enabled, NVSE must strictly be the same revision as the server",
+            "env_variable": "STRICT_NVSE",
+            "default_value": "0",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": [
+                "required",
+                "integer",
+                "in:0,1"
+            ]
+        },
+        {
+            "sort": 17,
+            "name": "WINDOWS_INSTALL",
+            "description": "",
+            "env_variable": "WINDOWS_INSTALL",
+            "default_value": "1",
+            "user_viewable": false,
+            "user_editable": false,
+            "rules": [
+                "required",
+                "in:1"
+            ]
+        },
+        {
+            "sort": 15,
+            "name": "WINEARCH",
+            "description": "",
+            "env_variable": "WINEARCH",
+            "default_value": "win32",
+            "user_viewable": true,
+            "user_editable": false,
+            "rules": [
+                "required",
+                "string"
+            ]
+        },
+        {
+            "sort": 16,
+            "name": "WINEDEBUG",
+            "description": "",
+            "env_variable": "WINEDEBUG",
+            "default_value": "-all",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": [
+                "nullable"
+            ]
+        },
+        {
+            "sort": 14,
+            "name": "WINETRICKS_RUN",
+            "description": "",
+            "env_variable": "WINETRICKS_RUN",
+            "default_value": "dotnet4.8 vcrun2019",
+            "user_viewable": false,
+            "user_editable": false,
+            "rules": []
+        }
+    ]
+}
