@@ -4,8 +4,8 @@
         "version": "PLCN_v1",
         "update_url": null
     },
-    "exported_at": "2025-05-14T02:40:43+00:00",
-    "name": "New Vegas Multiplayer",
+    "exported_at": "2025-05-14T03:01:00+00:00",
+    "name": "Fallout: New Vegas MP",
     "author": "nataliee@duck.com",
     "uuid": "0ac9adf8-3fb8-4acb-9ba3-e50bd59ef502",
     "description": "New Vegas Multiplayer is an unofficial multiplayer framework modification of the Fallout title.",
@@ -122,7 +122,7 @@
             "env_variable": "GAME_SERVER_PORT",
             "default_value": "27015",
             "user_viewable": true,
-            "user_editable": true,
+            "user_editable": false,
             "rules": [
                 "required",
                 "integer"
@@ -149,7 +149,7 @@
             "env_variable": "SERVER_HOSTNAME",
             "default_value": "*",
             "user_viewable": true,
-            "user_editable": true,
+            "user_editable": false,
             "rules": [
                 "required"
             ]
@@ -227,7 +227,7 @@
             "description": "",
             "env_variable": "WINEARCH",
             "default_value": "win32",
-            "user_viewable": true,
+            "user_viewable": false,
             "user_editable": false,
             "rules": [
                 "required",
@@ -240,8 +240,8 @@
             "description": "",
             "env_variable": "WINEDEBUG",
             "default_value": "-all",
-            "user_viewable": true,
-            "user_editable": true,
+            "user_viewable": false,
+            "user_editable": false,
             "rules": [
                 "nullable"
             ]
@@ -254,7 +254,9 @@
             "default_value": "dotnet4.8 vcrun2019",
             "user_viewable": false,
             "user_editable": false,
-            "rules": []
+            "rules": [
+                "required"
+            ]
         }
     ]
 }
